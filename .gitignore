@@ -125,6 +125,10 @@ env.bak/
 venv.bak/
 myvenv38/
 
+# Folder
+
+mnist/
+
 # Spyder project settings
 .spyderproject
 .spyproject

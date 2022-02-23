@@ -1,64 +1,91 @@
-import numpy as np 
 import cv2
+import numpy as np
+import sys
 
-RESIZED_IMAGE_WIDTH = 30 
-RESIZED_IMAGE_HEIGHT = 40
+RESIZED_IMAGE_WIDTH = 30
+RESIZED_IMAGE_HEIGTH = 40
 
-charB = 66
-charC = 67
-
-
-imgTrainingB = cv2.imread("b/b.png")
-imgTrainingC = cv2.imread("c/c.png")
-#imgTrainingX = cv2.imread("x/x.jpg")
-#imgTrainingZ = cv2.imread("z/z.jpg")
-
-imgGrayB = cv2.cvtColor(imgTrainingB, cv2.COLOR_BGR2GRAY) 
-imgGrayC = cv2.cvtColor(imgTrainingC, cv2.COLOR_BGR2GRAY) 
-#imgGrayX = cv2.cvtColor(img Trainingx, cv2.COLOR_BGR2GRAY) 
-#imgGrayZ = cv2.cvtColor(imgTrainingz, cv2.COLOR_BGR2GRAY),
-
-retvaleB, imgThreshB = cv2.threshold(imgGrayB, 150, 255, cv2.CHAIN_APPROX_NONE)
-retvalC, imgThreshC = cv2. threshold(imgGrayC, 150, 255, cv2.CHAIN_APPROX_NONE) 
-#retvalX, imgThreshX = cv2.threshold(imgGrayx, 150, 255, cv2.CHAIN_APPROX_NONE)
-#retvalz, img ThreshZ = cv2. threshold(imgGrayz, 150, 255, cv2.CHAIN_APPROX_NONE)
-
-imgThreshCopyB = imgThreshB.copy()
-imgThreshCopyC = imgThreshC.copy()
-
-imgContoursB, hB = cv2.findContours(imgThreshCopyB, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-imgContoursC, hC = cv2.findContours(imgThreshCopyB, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+charClassifications = np.loadtxt("classifications.txt", np.float32) 
+flatCharImages = np.loadtxt("flatchar Images.txt", np.float32) 
+charClassifications = charClassifications.reshape((charClassifications.size, 1))
 
 
-flattenedImages = np.empty((0, RESIZED_IMAGE_WIDTH * RESIZED_IMAGE_HEIGHT)) 
+# KNN
+knn = cv2.ml.KNearest_create()
+kNearest = knn
 
-intClassifications = []
-
-for cB in imgContoursB:
-    [intX, intY, intW, intH] = cv2.boundingRect(cB) 
-    imgROIB = imgThreshB[intY:intY+intH, intX:intX + intW]
-    imgResizedROIB = cv2.resize(imgROIB, (RESIZED_IMAGE_WIDTH, RESIZED_IMAGE_HEIGHT))
-
-    intClassifications.append(charB)
-    flattenImg = imgResizedROIB.reshape(1, RESIZED_IMAGE_WIDTH * RESIZED_IMAGE_HEIGHT)
-    flattenedImages = np.append(flattenedImages, flattenImg, 0)
-
-for cC in imgContoursC:
-    [intX, intY, intW, intH] = cv2.boundingRect(cC) 
-    imgROIC = imgThreshC[intY:intY+intH, intX:intX + intW]
-    imgResizedROIC = cv2.resize(imgROIC, (RESIZED_IMAGE_WIDTH, RESIZED_IMAGE_HEIGHT))
-
-    intClassifications.append(charC)
-    flattenImg = imgResizedROIC.reshape(1, RESIZED_IMAGE_WIDTH * RESIZED_IMAGE_HEIGHT)
-    flattenedImages = np.append(flattenedImages, flattenImg, 0)
+# knn.train(flatCharImages,cv2.ml.ROW_SAMPLE,charClassifications)
+knn.train(flatCharImages, cv2.ml.ROW_SAMPLE, charClassifications)
 
 
-fltClassifications = np.array(intClassifications, np.float64)
-finalClassifications = fltClassifications.reshape(fltClassifications.size, 1)
+imgTestSample = cv2.imread(sys.path[0]+"/test_image/001.png", 1) 
+
+bf = cv2.bilateralFilter(imgTestSample, 50, 100, 100) 
+
+imgGray = cv2.cvtColor(bf, cv2.COLOR_BGR2GRAY)
+
+retval, th = cv2.threshold(imgGray, 150, 255, cv2.CHAIN_APPROX_NONE)
+
+thCopy = th.copy()
+contours, h = cv2.findContours(thCopy, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+contours, h = cv2.findContours(thCopy, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) 
 
 
-print("Complete!!!")
-np.savetxt("classifications.txt", finalClassifications)
-np.savetxt("flatchar Images.txt", flattenedImages)
+# contoursCopy = contours.copy()
+contoursCopy = contours
+
+strFinalString = ""
+
+for c in contoursCopy:
+    approx = cv2.approxPolyDP(c, 0.01 * cv2.arcLength(c, True), True) 
+    if len(approx) == 4: 
+        if len(str(cv2.contourArea(approx))) < 6:
+            pass 
+        else:
+            [intX, intY, intW, intH] = cv2.boundingRect(approx)
+            cv2.rectangle(imgTestSample, (intX, intY), (intX+intW, intY+intH), (0, 255, 0), 2)
+            
+            imgChar = th[intY:intY+intH, intX:intX+intW]
+            imgChar = imgChar[5:50, 5:48]
+
+            imgInv = cv2.bitwise_not(imgChar) 
+            ret, th1 = cv2.threshold(imgInv, 150, 255, cv2.CHAIN_APPROX_NONE) 
+            cntr, h = cv2.findContours(th1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) 
+            for myc in cntr:
+                [intX, intY, intW, intH] = cv2.boundingRect(myc) 
+                imgROI = th1[intY:intY+intH, intX:intX+intW] 
+                imgROIResized = cv2.resize(imgROI, (RESIZED_IMAGE_WIDTH, RESIZED_IMAGE_HEIGTH))
+                
+                cv2.imshow( '12123', imgROIResized) 
+                cv2.waitKey(0)
+
+                finalResized = imgROIResized.reshape((1, RESIZED_IMAGE_WIDTH * RESIZED_IMAGE_HEIGTH)) 
+                finalResized = np.float32(finalResized)
+
+                ret, result, neighbours, dist = kNearest.findNearest(finalResized, k=1)
+                
+                tmpString = str(chr(int(result[0][0])))
+
+                strFinalString = strFinalString + tmpString
+
+
+print(strFinalString)
+
+# f = open("result.csv", "w")
+# f.write(strFinalString)
+# f.close
+
+with open('result.csv','w') as file:
+    for line in strFinalString:
+        file.write(line)
+        file.write('\n')
+
+
+            
+
+
+            
+
 
 
