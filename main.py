@@ -14,7 +14,7 @@ charClassifications = charClassifications.reshape((charClassifications.size, 1))
 knn = cv2.ml.KNearest_create()
 kNearest = knn
 
-# knn.train(flatCharImages,cv2.ml.ROW_SAMPLE,charClassifications)
+
 knn.train(flatCharImages, cv2.ml.ROW_SAMPLE, charClassifications)
 
 
@@ -72,20 +72,9 @@ for c in contoursCopy:
 
 print(strFinalString)
 
-# f = open("result.csv", "w")
-# f.write(strFinalString)
-# f.close
 
 with open('result.csv','w') as file:
     for line in strFinalString:
         file.write(line)
         file.write('\n')
-
-
-            
-
-
-            
-
-
 
