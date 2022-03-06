@@ -6,7 +6,7 @@ RESIZED_IMAGE_WIDTH = 30
 RESIZED_IMAGE_HEIGTH = 40
 
 charClassifications = np.loadtxt("classifications.txt", np.float32) 
-flatCharImages = np.loadtxt("flatchar Images.txt", np.float32) 
+flatCharImages = np.loadtxt("flatcharImages.txt", np.float32)
 charClassifications = charClassifications.reshape((charClassifications.size, 1))
 
 
@@ -57,8 +57,8 @@ for c in contoursCopy:
                 imgROI = th1[intY:intY+intH, intX:intX+intW] 
                 imgROIResized = cv2.resize(imgROI, (RESIZED_IMAGE_WIDTH, RESIZED_IMAGE_HEIGTH))
                 
-                cv2.imshow( '12123', imgROIResized) 
-                cv2.waitKey(0)
+                # cv2.imshow('windows', imgROIResized)
+                # cv2.waitKey(0)
 
                 finalResized = imgROIResized.reshape((1, RESIZED_IMAGE_WIDTH * RESIZED_IMAGE_HEIGTH)) 
                 finalResized = np.float32(finalResized)
